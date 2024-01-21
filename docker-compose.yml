@@ -1,7 +1,8 @@
 version: '3'
 services:
   db:
-    image: postgres
+    image: postgres:12
+    network_mode: "bridge"
     environment:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testuserpass
@@ -28,5 +29,5 @@ services:
       - db:db
       - redis:redis
     ports:
-      - 8080:8080
+      - 8081:8080
     restart: always
