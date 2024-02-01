@@ -4,19 +4,14 @@ services:
     image: postgres:12
     network_mode: "bridge"
     environment:
-      POSTGRES_USER: steem
-      POSTGRES_PASSWORD: steem123
-      POSTGRES_DB: hivedb
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuserpass
+      POSTGRES_DB: testdb
     volumes:
-      - ./data:/var/lib/postgresql/data
-      - ./my-postgres.conf:/etc/postgresql/postgresql.conf
-      - /tmp:/tmp
+      - ./postgres_data:/var/lib/postgresql/data
     restart: always
   redis:
     image: redis
-    network_mode: "bridge"
     volumes:
       - ./redis_data:/data
     restart: always
@@ -25,19 +20,14 @@ services:
       - db
       - redis
     image: steemit/hivemind:latest
-    network_mode: "bridge"
     environment:
-      DATABASE_URL: postgresql://steem:steem123@db:5432/hivedb
-      LOG_LEVEL: DEBUG
-      TEST_DISABLE_SYNC: 1
-      STEEMD_URL: http://api.moecki.online # This is the fullnode api
+      LOG_LEVEL: INFO
+      DATABASE_URL: postgresql://testuser:testuserpass@db:5432/testdb
+      STEEMD_URL: https://api.steemit.com
       REDIS_URL: redis://redis:6379
-      SYNC_SERVICE: 1
-      MAX_BATCH: 50
-      MAX_WORKERS: 2
-    ports:
-      - "8081:8080"
     links:
       - db:db
       - redis:redis
+    ports:
+      - 8081:8080
     restart: always
