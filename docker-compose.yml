@@ -4,14 +4,15 @@ services:
     image: postgres:12
     network_mode: "bridge"
     environment:
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuserpass
-      POSTGRES_DB: testdb
+      POSTGRES_USER: steem
+      POSTGRES_PASSWORD: steem123
+      POSTGRES_DB: hivedb
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     restart: always
   redis:
     image: redis
+    network_mode: "bridge"
     volumes:
       - ./redis_data:/data
     restart: always
@@ -19,11 +20,12 @@ services:
     depends_on:
       - db
       - redis
-    image: steemit/hivemind:latest
+    build: .
+    network_mode: "bridge"
     environment:
-      LOG_LEVEL: INFO
-      DATABASE_URL: postgresql://testuser:testuserpass@db:5432/testdb
-      STEEMD_URL: https://api.steemit.com
+      LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql://steem:steem123@db:5432/hivedb
+      STEEMD_URL: https://api.moecki.online
       REDIS_URL: redis://redis:6379
     links:
       - db:db
