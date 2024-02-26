@@ -54,3 +54,6 @@ local.db
 *.db
 envfile
 /deploy
+redis_data/
+data/
+postgres_data/
