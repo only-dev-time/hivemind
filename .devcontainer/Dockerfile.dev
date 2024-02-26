@@ -1,4 +1,4 @@
-FROM phusion/baseimage:0.11
+FROM phusion/baseimage:focal-1.2.0
 
 
 ENV ENVIRONMENT DEV
@@ -31,7 +31,7 @@ RUN \
         liblz4-tool \
         postgresql \
         postgresql-contrib \
-        python3.7 \
+        # python3.7 \
         python3-dev \
         python3-pip \
         libxml2-dev \
@@ -48,8 +48,9 @@ ADD . /app
 
 WORKDIR /app
 
-RUN rm /usr/bin/python3
-RUN ln -s /usr/bin/python3.7 /usr/bin/python3
+# neues baseimage hat bereits python3.8
+# RUN rm /usr/bin/python3
+# RUN ln -s /usr/bin/python3.7 /usr/bin/python3
 RUN python3 -m pip install --upgrade --force-reinstall pip
 RUN pip install --force-reinstall -v "sqlalchemy==1.4.49"
 RUN pip3 install -e .[test]
