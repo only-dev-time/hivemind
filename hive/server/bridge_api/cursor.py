@@ -508,7 +508,7 @@ async def pids_by_bookmarks(db, account: str, sort: str = 'bookmarks', category:
         SELECT bookmarks.post_id
           FROM hive_bookmarks AS bookmarks
           %s
-         WHERE account = :account %s
+         WHERE bookmarks.account = :account %s
       ORDER BY %s
          LIMIT :limit
     """ % (join, seek, order_by)
