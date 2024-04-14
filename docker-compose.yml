@@ -4,11 +4,12 @@ services:
     image: postgres:12
     network_mode: "bridge"
     environment:
-      POSTGRES_USER: steem
-      POSTGRES_PASSWORD: steem123
-      POSTGRES_DB: hivedb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuserpass
+      POSTGRES_DB: testdb
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - /tmp:/tmp
     restart: always
   redis:
     image: redis
@@ -24,9 +25,12 @@ services:
     network_mode: "bridge"
     environment:
       LOG_LEVEL: DEBUG
-      DATABASE_URL: postgresql://steem:steem123@db:5432/hivedb
+      DATABASE_URL: postgresql://testuser:testuserpass@db:5432/testdb
       STEEMD_URL: https://api.moecki.online
       REDIS_URL: redis://redis:6379
+      MAX_BATCH: 50
+      MAX_WORKERS: 4
+      SYNC_SERVICE: 0
     links:
       - db:db
       - redis:redis
