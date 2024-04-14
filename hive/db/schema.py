@@ -370,8 +370,8 @@ def build_metadata_bookmarks(metadata=None):
         
         sa.UniqueConstraint('account', 'post_id', name='hive_bookmarks_ux1'),
         sa.Index('hive_bookmarks_ix1', 'post_id'), 
-        sa.Index('hive_bookmarks_ix2', 'post_id', 'account'), 
-        sa.Index('hive_bookmarks_ix3', 'bookmarked_at'),
+        sa.Index('hive_bookmarks_ix2', 'account', 'post_id'), 
+        sa.Index('hive_bookmarks_ix3', 'account', 'bookmarked_at'),
     )
 
     return metadata
