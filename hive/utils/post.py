@@ -230,7 +230,7 @@ def _score_without_bots(active_votes, created_timestamp, timescale=480000):
     # Calculate no_bot_rshares    
     no_bot_rshares = 0
     for vote in active_votes:
-        no_bot_rshares += vote["rshares"] if vote["voter"] not in BOTS else 0
+        no_bot_rshares += int(vote["rshares"]) if vote["voter"] not in BOTS else 0
     
     return _score(no_bot_rshares, created_timestamp, timescale)
 
