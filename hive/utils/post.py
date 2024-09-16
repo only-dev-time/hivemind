@@ -195,7 +195,9 @@ def post_payout(post):
 
     # trending scores
     _timestamp = utc_timestamp(parse_time(post['created']))
-    sc_trend = _score(rshares, _timestamp, 240000)
+    # test new score without bot votes
+    sc_trend = _score_without_bots(post['active_votes'], _timestamp, 240000)
+    # sc_trend = _score(rshares, _timestamp, 240000)
     sc_hot = _score(rshares, _timestamp, 10000)
 
     return {
@@ -220,6 +222,17 @@ def _score(rshares, created_timestamp, timescale=480000):
     order = math.log10(max((abs(mod_score), 1)))
     sign = 1 if mod_score > 0 else -1
     return sign * order + created_timestamp / timescale
+
+def _score_without_bots(active_votes, created_timestamp, timescale=480000):
+    """Calculate trending/hot score without bots."""
+    BOTS = ["upvu", "upex", "tipu", "abb-curation", "justyy", "heroism"]
+
+    # Calculate no_bot_rshares    
+    no_bot_rshares = 0
+    for vote in active_votes:
+        no_bot_rshares += vote["rshares"] if vote["voter"] not in BOTS else 0
+    
+    return _score(no_bot_rshares, created_timestamp, timescale)
 
 def post_stats(post):
     """Get post statistics and derived properties.
