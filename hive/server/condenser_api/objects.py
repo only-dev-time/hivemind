@@ -42,7 +42,7 @@ async def load_posts_keyed(db, ids, truncate_body=0):
     # fetch posts and associated author reps
     sql = """SELECT post_id, author, permlink, title, body, category, depth,
                     promoted, payout, payout_at, is_paidout, children, votes,
-                    created_at, updated_at, rshares, raw_json, json
+                    created_at, updated_at, rshares, raw_json, json, sc_trend
                FROM hive_posts_cache WHERE post_id IN :ids"""
     result = await db.query_all(sql, ids=tuple(ids))
     author_reps = await _query_author_rep_map(db, result)
