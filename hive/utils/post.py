@@ -225,7 +225,30 @@ def _score(rshares, created_timestamp, timescale=480000):
 
 def _score_without_bots(active_votes, created_timestamp, timescale=480000):
     """Calculate trending/hot score without bots."""
-    BOTS = ["upvu", "upex", "tipu", "abb-curation", "justyy", "heroism"]
+    BOTS = [
+        "abb-curation", 
+        "boomerang", 
+        "bot-api", 
+        "coin-doubler", 
+        "gotogether", 
+        "h4lab",
+        "heroism", 
+        "justyy", 
+        "nutbox.mine", 
+        "robiniaswap", 
+        "steem-punks", 
+        "steembasicincome", 
+        "steemegg", 
+        "successgr.with", 
+        "support-kr", 
+        "templar-kr", 
+        "tipu", 
+        "upex", 
+        "upmewhale", 
+        "upvu", 
+        "vote.steem-aaa", 
+        "xiguang"
+    ]
 
     # Calculate no_bot_rshares    
     no_bot_rshares = 0
