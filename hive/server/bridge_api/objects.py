@@ -221,6 +221,8 @@ def _condenser_post_object(row, truncate_body=0):
     post['active_votes'] = _hydrate_active_votes(row['votes'])
     post['author_reputation'] = row['author_rep']
 
+    post['sc_trend'] = row['sc_trend']
+    
     post['stats'] = {
         'hide': row['is_hidden'],
         'gray': row['is_grayed'],
