@@ -259,6 +259,8 @@ def _score_without_bots(active_votes, created_timestamp, timescale=480000):
 
 def _score_with_median_rshares(active_votes, created_timestamp, timescale=480000):
     """Calculate trending/hot score with median rshares."""
+    if not active_votes:
+        return 0
     rshares = [int(vote['rshares']) for vote in active_votes]
     median_rshare = sorted(rshares)[len(rshares) // 2]
     return _score(median_rshare, created_timestamp, timescale)
