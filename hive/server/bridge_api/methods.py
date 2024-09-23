@@ -20,7 +20,8 @@ async def _get_post_id(db, author, permlink):
               WHERE author = :a
                 AND permlink = :p
                 AND is_deleted = '0'"""
-    post_id = await db.query_one(sql, a=author, p=permlink)
+    cache_key = f'_get_post_id_{author}_{permlink}'
+    post_id = await db.query_one(sql, a=author, p=permlink, cache_key=cache_key)
     assert post_id, 'invalid author/permlink'
     return post_id
 
