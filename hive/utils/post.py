@@ -196,7 +196,7 @@ def post_payout(post):
     # trending scores
     _timestamp = utc_timestamp(parse_time(post['created']))
     # test new score without bot votes
-    sc_trend = _score_with_weighted_median_rshares(post['active_votes'], _timestamp, 240000)
+    sc_trend = _score_with_linear_median_and_min(post['active_votes'], _timestamp, 240000)
     # sc_trend = _score(rshares, _timestamp, 240000)
     sc_hot = _score(rshares, _timestamp, 10000)
 
@@ -275,6 +275,18 @@ def _score_with_weighted_median_rshares(active_votes, created_timestamp, timesca
     else:
         weighted_median_rshare = 0
     return _score(weighted_median_rshare, created_timestamp, timescale)
+
+def _score_with_linear_median_and_min(active_votes, created_timestamp, timescale=480000):
+    """Calculate trending/hot score with linear median and min rshares."""
+    if active_votes:
+        rshares = [int(vote['rshares']) for vote in active_votes]
+        length = len(rshares)
+        median_rshares = sorted(rshares)[length // 2]
+        median_rshares *= 1 if length > 10 else 0.00001 # under 10 votes scale down
+        weighted_median_rshares = int(median_rshares * min(length / 30, 1))  # Linear weighted median
+    else:
+        weighted_median_rshares = 0
+    return _score(weighted_median_rshares, created_timestamp, timescale)
 
 def post_stats(post):
     """Get post statistics and derived properties.
