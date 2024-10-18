@@ -1,6 +1,6 @@
 """Cursor-based pagination queries, mostly supporting bridge_api."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 # pylint: disable=too-many-lines
@@ -119,7 +119,17 @@ async def pids_by_community(db, ids, sort, seek_id, limit):
     # setup
     field, pending, toponly, gray, promoted = definitions[sort]
     table = 'hive_posts_cache'
-    where = ["community_id IN :ids"] if ids else ["community_id IS NOT NULL AND community_id != 1337319"]
+    where = []
+    if ids:
+        if sort != 'created':
+            now = datetime.now()
+            seven_days_ago = now - timedelta(days=7)
+            timestamp = int(seven_days_ago.timestamp())
+            where.append(f"community_id IN :ids and created_at >= to_timestamp({timestamp})")
+        else:
+            where.append("community_id IN :ids")
+    else:
+        where.append("community_id IS NOT NULL AND community_id != 1337319")
 
     # select
     if gray:     where.append("is_grayed = '1'")
@@ -465,3 +475,55 @@ async def pids_by_payout(db, account: str, start_author: str = '',
     """ % seek
 
     return await db.query_col(sql, account=account, start_id=start_id, limit=limit)
+
+async def pids_by_bookmarks(db, account: str, sort: str = 'bookmarks', category: str = '', start_author: str = '',
+                            start_permlink: str = '', limit: int = 20):
+    """Get a list of post_ids for an author's bookmarks."""
+    seek = ''
+    join = ''
+    start_id = await _get_post_id(db, start_author, start_permlink) if start_permlink else None
+
+    if sort == 'bookmarks':
+        # order by age of bookmarks
+        order_by = "bookmarks.bookmarked_at DESC"
+        if start_permlink:
+            seek = """
+                AND bookmarks.bookmarked_at < (
+                    SELECT bookmarked_at FROM hive_bookmarks
+                     WHERE post_id = :start_id
+                       AND account = :account
+                )
+            """
+    
+    elif sort == 'posts':
+        # order by age of posts
+        order_by = "bookmarks.post_id DESC"
+        if start_permlink:
+            seek = "AND bookmarks.post_id < :start_id"
+    
+    elif sort == 'authors':
+        # order by name of authors
+        # sort by author, then by post_id 
+        # for paging we need a sort if more than one post by the same author is bookmarked
+        join = "JOIN hive_posts AS posts ON bookmarks.post_id = posts.id"
+        order_by = "posts.author ASC, bookmarks.post_id DESC"
+        if start_permlink:
+            seek = """
+                AND (posts.author > :start_author
+                OR (posts.author = :start_author AND bookmarks.post_id < :start_id))
+            """
+
+    sql = """
+        SELECT bookmarks.post_id
+          FROM hive_bookmarks AS bookmarks
+          %s
+         WHERE bookmarks.account = :account %s
+      ORDER BY %s
+         LIMIT :limit
+    """ % (join, seek, order_by)
+
+    return await db.query_col(sql, 
+                              account=account, 
+                              start_id=start_id, 
+                              start_author=start_author, 
+                              limit=limit)
