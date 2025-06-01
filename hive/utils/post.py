@@ -86,7 +86,7 @@ def post_to_internal(post, post_id, level='insert', promoted=None):
     
     # new scores with interaction
     # from hive.db.adapter import Db # TODO remove if checked, because fields not needed - here only for debugging
-    # scores = post_scores(Db.instance(), post) # TODO remove if checked, because fields not needed - here only for debugging
+    # scores = post_scores(Db.instance(), post_id, post) # TODO remove if checked, because fields not needed - here only for debugging
 
     # //--
     # if community - override fields.
@@ -288,7 +288,7 @@ def post_stats(post):
     }
 
 @performance_meter
-def post_scores(db, post):
+def post_scores(db, pid, post):
     """Get post score based on reblogged_by and replies."""
 
     # calculate score only for root posts
@@ -309,7 +309,6 @@ def post_scores(db, post):
         'hot_factor': 24               # Hot score factor for timescale
     }
 
-    pid = post['post_id']
     log.debug("POST_INTERACTION_SCORE: post: (%s) %s/%s", pid, post['author'], post['permlink']) # for debugging TODO remove
 
     # base score logic - old score

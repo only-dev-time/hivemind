@@ -512,7 +512,7 @@ class CachedPost:
         # update unconditionally
         payout = post_payout(post)
         stats = post_stats(post)
-        scores = post_scores(DB, post)
+        scores = post_scores(DB, pid, post)
 
         # //--
         # if community - override fields.
