@@ -8,7 +8,7 @@ import ujson as json
 from toolz import partition_all
 from hive.db.adapter import Db
 
-from hive.utils.post import post_basic, post_legacy, post_payout, post_stats, mentions
+from hive.utils.post import post_basic, post_legacy, post_payout, post_stats, mentions, post_scores
 from hive.utils.timer import Timer
 from hive.indexer.accounts import Accounts
 from hive.indexer.notify import Notify
@@ -512,6 +512,7 @@ class CachedPost:
         # update unconditionally
         payout = post_payout(post)
         stats = post_stats(post)
+        scores = post_scores(DB, post)
 
         # //--
         # if community - override fields.
@@ -526,8 +527,8 @@ class CachedPost:
             ('payout',      payout['payout']),
             ('rshares',     payout['rshares']),
             ('votes',       payout['csvotes']),
-            ('sc_trend',    payout['sc_trend']),
-            ('sc_hot',      payout['sc_hot']),
+            ('sc_trend',    scores['sc_trend']),
+            ('sc_hot',      scores['sc_hot']),
             ('flag_weight', stats['flag_weight']),
             ('total_votes', stats['total_votes']),
             ('up_votes',    stats['up_votes']),

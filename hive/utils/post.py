@@ -4,9 +4,24 @@
 import re
 import math
 import ujson as json
+import logging # for debugging TODO remove
+from time import perf_counter # for debugging TODO remove
 from funcy.seqs import first, distinct
 
 from hive.utils.normalize import sbd_amount, rep_log10, safe_img_url, parse_time, utc_timestamp
+
+log = logging.getLogger(__name__) # for debugging TODO remove
+
+# TODO: remove this decorator after debugging
+def performance_meter(func):
+    """Decorator to measure performance of a function."""
+    def wrapper(*args, **kwargs):
+        start_time = perf_counter()
+        result = func(*args, **kwargs)
+        end_time = perf_counter()
+        log.debug("Function %s took %f seconds", func.__name__, end_time - start_time)
+        return result
+    return wrapper
 
 def mentions(body):
     """Given a post body, return proper @-mentioned account names."""
@@ -68,6 +83,10 @@ def post_to_internal(post, post_id, level='insert', promoted=None):
     # update unconditionally
     payout = post_payout(post)
     stats = post_stats(post)
+    
+    # new scores with interaction
+    # from hive.db.adapter import Db # TODO remove if checked, because fields not needed - here only for debugging
+    # scores = post_scores(Db.instance(), post) # TODO remove if checked, because fields not needed - here only for debugging
 
     # //--
     # if community - override fields.
@@ -82,8 +101,8 @@ def post_to_internal(post, post_id, level='insert', promoted=None):
         ('payout',      payout['payout']),
         ('rshares',     payout['rshares']),
         ('votes',       payout['csvotes']),
-        ('sc_trend',    payout['sc_trend']),
-        ('sc_hot',      payout['sc_hot']),
+        # ('sc_trend',    payout['sc_trend']), # not needed for further processing
+        # ('sc_hot',      payout['sc_hot']), # not needed for further processing
         ('flag_weight', stats['flag_weight']),
         ('total_votes', stats['total_votes']),
         ('up_votes',    stats['up_votes']),
@@ -193,22 +212,16 @@ def post_payout(post):
     rshares = sum(int(v['rshares']) for v in post['active_votes'])
     csvotes = "\n".join(map(_vote_csv_row, post['active_votes']))
 
-    # trending scores
-    _timestamp = utc_timestamp(parse_time(post['created']))
-    # sc_trend = _score(rshares, _timestamp, 240000)
-    # sc_hot = _score(rshares, _timestamp, 10000)
-
-    # tests with other score calculations
-    weighted_rshares = _weighted_rshares_linear_median_and_min(post['active_votes'])
-    sc_trend = _score(weighted_rshares, _timestamp, 240000)
-    sc_hot = _score(weighted_rshares, _timestamp, 10000)
+    # _timestamp = utc_timestamp(parse_time(post['created'])) # not needed
+    # sc_trend = _score(rshares, _timestamp, 240000) # calculate in post_scores
+    # sc_hot = _score(rshares, _timestamp, 10000) # calculate in post_scores
 
     return {
         'payout': payout,
         'rshares': rshares,
-        'csvotes': csvotes,
-        'sc_trend': sc_trend,
-        'sc_hot': sc_hot
+        'csvotes': csvotes
+        # 'sc_trend': sc_trend,
+        # 'sc_hot': sc_hot 
     }
 
 def _vote_csv_row(vote):
@@ -216,6 +229,7 @@ def _vote_csv_row(vote):
     rep = rep_log10(vote['reputation'])
     return "%s,%s,%s,%s" % (vote['voter'], vote['rshares'], vote['percent'], rep)
 
+@performance_meter
 def _score(rshares, created_timestamp, timescale=480000):
     """Calculate trending/hot score.
 
@@ -271,4 +285,72 @@ def post_stats(post):
         'flag_weight': flag_weight,
         'total_votes': total_votes,
         'up_votes': up_votes
+    }
+
+@performance_meter
+def post_scores(db, post):
+    """Get post score based on reblogged_by and replies."""
+
+    # calculate score only for root posts
+    if post['depth'] > 0:
+        return {
+            'sc_trend': 0.0,
+            'sc_hot': 0.0
+        }
+
+    config = {
+        'vote_weight': 0.2,            # Weight for original score components based on votes
+        'interaction_weight': 0.7,     # Weight for interaction components
+        'reblog_weight': 1.0,          # Resteems
+        'comment_weight': 0.7,         # Children
+        'reblog_divisor': 1.0,         # Resteem divisor for normalisation
+        'comment_divisor': 2.0,        # Children divisor for normalisation
+        'trending_timescale': 240000,  # 240k seconds = 66.67 hours
+        'hot_factor': 24               # Hot score factor for timescale
+    }
+
+    pid = post['post_id']
+    log.debug("POST_INTERACTION_SCORE: post: (%s) %s/%s", pid, post['author'], post['permlink']) # for debugging TODO remove
+
+    # base score logic - old score
+    created_timestamp = utc_timestamp(parse_time(post['created']))
+    mod_score = int(post['net_rshares']) / 1e7
+    log_order = math.log10(max(abs(mod_score), 1))
+    sign = 1 if mod_score > 0 else -1
+    votes_score = sign * log_order
+
+    # interaction score component
+    # TODO only for debugging
+    # sql = "SELECT author,permlink FROM hive_posts WHERE id = :post_id"
+    # post_row = db.query_row(sql, post_id=pid)
+    # log.debug("POST_INTERACTION_SCORE: post_row: %s", post_row)
+    # if post_row and ( post_row['author'] != post['author'] or post_row['permlink'] != post['permlink'] ):
+    #     log.error("POST_INTERACTION_SCORE: post: %s/%s, db: %s/%s", post['author'], post['permlink'], post_row['author'], post_row['permlink'])
+
+    # get reblog count
+    sql = "SELECT COUNT(1) FROM hive_reblogs WHERE post_id = :post_id"
+    reblogs = int(db.query_one(sql, post_id=pid)) #TODO in int umwandeln aber nicht direkt, da Coroutine Rückgabewert
+    log.debug("POST_INTERACTION_SCORE: reblogs: %s", reblogs) # for debugging TODO remove
+    # get children count
+    children = post['children']
+    log.debug("POST_INTERACTION_SCORE: children: %s", children) # for debugging TODO remove
+
+    interaction_score = (
+        config['reblog_weight'] * math.log10(max(reblogs / config['reblog_divisor'], 1)) +
+        config['comment_weight'] * math.log10(max(children / config['comment_divisor'], 1))
+    )
+
+    # base score without time component
+    base_score = votes_score * config['vote_weight'] + interaction_score * config['interaction_weight']
+    log.debug("POST_INTERACTION_SCORE: base_score: %s, votes_score: %s, interaction_score: %s", base_score, votes_score, interaction_score) # for debugging TODO remove
+
+    # time component
+    trending_score = float(base_score + (created_timestamp / config['trending_timescale']))
+    hot_score = float(base_score + (created_timestamp / (config['trending_timescale'] / config['hot_factor'])))
+    log.debug("POST_INTERACTION_SCORE: trending: %s", trending_score) # for debugging TODO remove
+    log.debug("POST_INTERACTION_SCORE: hot: %s", hot_score) # for debugging TODO remove
+
+    return {
+        'sc_trend': trending_score,
+        'sc_hot': hot_score
     }
