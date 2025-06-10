@@ -67,7 +67,7 @@ class Sync:
             # perform cleanup if process did not exit cleanly
             CachedPost.recover_missing_posts(self._steem)
 
-            if self._conf.get('force-follow-recount'):
+            if self._conf.get('force_follow_recount'):
                 # force recount of all follows
                 log.info("[SYNC] Force recount of all follows")
                 Follow.force_recount()
