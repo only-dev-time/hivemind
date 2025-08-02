@@ -299,7 +299,7 @@ def post_scores(db, pid, post):
         }
 
     config = {
-        'vote_weight': 0.2,            # Weight for original score components based on votes
+        'vote_weight': 0.1,            # Weight for original score components based on votes
         'interaction_weight': 0.7,     # Weight for interaction components
         'reblog_weight': 1.0,          # Resteems
         'comment_weight': 0.7,         # Children
